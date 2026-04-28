@@ -1,0 +1,990 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DemandOS - Dashboard</title>
+  <meta name="description" content="DemandOS dashboard - your central command for demand prediction and inventory management." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="dashboard.css" />
+  <link rel="stylesheet" href="inventory.css" />
+  <link rel="stylesheet" href="add-product.css" />
+  <link rel="stylesheet" href="demand.css" />
+  <link rel="stylesheet" href="trends.css" />
+  <link rel="stylesheet" href="alerts.css" />
+  <style>
+/* ═══════════ ANALYTICS PAGE ═══════════ */
+
+/* Summary Strip */
+.analytics-strip { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:28px; }
+.analytics-stat { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:20px 22px; opacity:0; transform:translateY(14px); animation:anStatIn 450ms var(--ease) forwards; transition:border-color 250ms,box-shadow 250ms; }
+.analytics-stat:nth-child(1){animation-delay:50ms} .analytics-stat:nth-child(2){animation-delay:120ms} .analytics-stat:nth-child(3){animation-delay:190ms} .analytics-stat:nth-child(4){animation-delay:260ms}
+@keyframes anStatIn { to{opacity:1;transform:translateY(0)} }
+.analytics-stat:hover { border-color:var(--border-hover); box-shadow:0 4px 20px rgba(0,0,0,.2); }
+.analytics-stat-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; margin-bottom:12px; }
+.analytics-stat-icon.blue { background:rgba(79,128,255,.12); }
+.analytics-stat-icon.amber { background:rgba(245,166,35,.12); }
+.analytics-stat-icon.green { background:rgba(0,201,167,.12); }
+.analytics-stat-icon.purple { background:rgba(157,111,255,.12); }
+.analytics-stat-value { font-size:22px; font-weight:800; color:var(--text-primary); letter-spacing:-.03em; margin-bottom:2px; }
+.analytics-stat-label { font-size:11.5px; color:var(--text-muted); }
+
+/* Section Card */
+.an-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:24px; margin-bottom:20px; opacity:0; transform:translateY(14px); animation:anStatIn 450ms var(--ease) forwards; animation-delay:350ms; transition:border-color 250ms; }
+.an-card:hover { border-color:var(--border-hover); }
+.an-card-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+.an-card-title { font-size:15px; font-weight:600; color:var(--text-primary); display:flex; align-items:center; gap:8px; }
+.an-card-title span { font-size:16px; }
+.an-card-sub { font-size:11px; color:var(--text-muted); }
+
+/* Graph */
+.an-graph { width:100%; height:200px; position:relative; margin-bottom:10px; }
+.an-graph svg { width:100%; height:100%; display:block; }
+.an-graph-line { fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; stroke-dasharray:1200; stroke-dashoffset:1200; animation:anLineDraw 1400ms var(--ease) 500ms forwards; }
+.an-graph-line.predicted { stroke-dasharray:6,4; stroke-width:1.8; animation-delay:900ms; }
+@keyframes anLineDraw { to{stroke-dashoffset:0} }
+.an-graph-fill { opacity:0; animation:anFillIn 700ms var(--ease) 900ms forwards; }
+@keyframes anFillIn { to{opacity:1} }
+.an-graph-labels { display:flex; justify-content:space-between; font-size:10px; color:var(--text-muted); }
+.an-graph-legend { display:flex; gap:18px; margin-top:10px; }
+.an-legend-item { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text-muted); }
+.an-legend-dot { width:8px; height:8px; border-radius:50%; }
+.an-legend-line { width:16px; height:2px; border-radius:1px; }
+.an-legend-line.dashed { background:repeating-linear-gradient(90deg,var(--accent2) 0,var(--accent2) 4px,transparent 4px,transparent 7px); }
+
+/* Two Column */
+.an-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; }
+
+/* Inventory Health */
+.an-health-list { display:flex; flex-direction:column; gap:10px; }
+.an-health-item { display:flex; align-items:center; gap:14px; padding:12px 16px; background:var(--surface2); border-radius:10px; border:1px solid transparent; transition:border-color 200ms; }
+.an-health-item:hover { border-color:var(--border-hover); }
+.an-health-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+.an-health-dot.red { background:var(--red); box-shadow:0 0 6px rgba(255,92,92,.4); }
+.an-health-dot.green { background:var(--accent2); box-shadow:0 0 6px rgba(0,201,167,.4); }
+.an-health-dot.blue { background:var(--accent); box-shadow:0 0 6px rgba(79,128,255,.4); }
+.an-health-name { font-size:13px; font-weight:500; color:var(--text-primary); flex:1; }
+.an-health-tag { font-size:10.5px; font-weight:600; padding:3px 10px; border-radius:6px; }
+.an-health-tag.restock { background:rgba(255,92,92,.12); color:var(--red); }
+.an-health-tag.safe { background:rgba(0,201,167,.12); color:var(--accent2); }
+.an-health-tag.reduce { background:rgba(79,128,255,.12); color:var(--accent); }
+
+/* Top Products */
+.an-top-list { display:flex; flex-direction:column; gap:10px; }
+.an-top-item { display:flex; align-items:center; gap:14px; padding:12px 16px; background:var(--surface2); border-radius:10px; }
+.an-top-rank { width:24px; height:24px; border-radius:8px; background:var(--surface3); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; color:var(--text-secondary); flex-shrink:0; }
+.an-top-name { font-size:13px; font-weight:500; color:var(--text-primary); flex:1; }
+.an-top-growth { font-size:12px; font-weight:700; color:var(--accent2); }
+.an-top-profit { font-size:11px; color:var(--text-muted); margin-left:8px; }
+
+/* Risk Alerts */
+.an-risk-list { display:flex; flex-direction:column; gap:10px; }
+.an-risk-item { display:flex; align-items:flex-start; gap:12px; padding:14px 16px; background:var(--surface2); border-radius:10px; border-left:3px solid var(--red); }
+.an-risk-icon { font-size:16px; flex-shrink:0; margin-top:1px; }
+.an-risk-text { font-size:13px; color:var(--text-secondary); line-height:1.5; }
+
+/* Predictions */
+.an-predict-list { display:flex; flex-direction:column; gap:10px; }
+.an-predict-item { display:flex; align-items:center; gap:14px; padding:14px 16px; background:var(--surface2); border-radius:10px; border-left:3px solid var(--purple); }
+.an-predict-emoji { font-size:18px; flex-shrink:0; }
+.an-predict-text { font-size:13px; color:var(--text-secondary); line-height:1.5; }
+
+/* Category Chart */
+.an-cat-bars { display:flex; flex-direction:column; gap:12px; }
+.an-cat-item { display:flex; align-items:center; gap:12px; }
+.an-cat-label { font-size:12px; color:var(--text-secondary); width:90px; flex-shrink:0; text-align:right; }
+.an-cat-track { flex:1; height:8px; background:var(--surface3); border-radius:4px; overflow:hidden; }
+.an-cat-fill { height:100%; border-radius:4px; transition:width 1200ms var(--ease); }
+.an-cat-fill.blue { background:var(--accent); }
+.an-cat-fill.green { background:var(--accent2); }
+.an-cat-fill.amber { background:var(--amber); }
+.an-cat-fill.purple { background:var(--purple); }
+.an-cat-fill.red { background:var(--red); }
+.an-cat-val { font-size:11px; font-weight:600; color:var(--text-muted); width:40px; }
+
+/* Smart Suggestions */
+.an-suggest-list { display:flex; flex-direction:column; gap:10px; }
+.an-suggest-item { display:flex; align-items:flex-start; gap:12px; padding:14px 16px; background:var(--surface2); border-radius:10px; border-left:3px solid var(--accent2); }
+.an-suggest-icon { font-size:16px; flex-shrink:0; margin-top:1px; }
+.an-suggest-text { font-size:13px; color:var(--text-secondary); line-height:1.5; }
+.an-suggest-text strong { color:var(--text-primary); font-weight:600; }
+
+/* Responsive */
+@media(max-width:1100px) { .analytics-strip { grid-template-columns:repeat(2,1fr); } .an-grid { grid-template-columns:1fr; } }
+@media(max-width:768px) { .analytics-strip { grid-template-columns:1fr 1fr; } }
+  </style>
+</head>
+<body>
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <!-- Profile -->
+    <div class="profile-section" id="profile-section">
+      <div class="profile-trigger" id="profile-trigger" onclick="toggleProfileDropdown()">
+        <div class="profile-avatar" id="profile-avatar">AK</div>
+        <div class="profile-info">
+          <div class="profile-name" id="profile-name">Arjun Kumar</div>
+          <div class="profile-role">Business Owner</div>
+        </div>
+        <svg class="profile-chevron" id="profile-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M4 6L8 10L12 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="profile-dropdown" id="profile-dropdown">
+        <a href="#" class="dropdown-opt" id="opt-edit-profile" onclick="event.preventDefault();openEditProfile()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z"/><path d="M20 21c0-3.3-3.6-6-8-6s-8 2.7-8 6"/></svg>
+          Edit Profile
+        </a>
+        <a href="#" class="dropdown-opt" id="opt-account-settings" onclick="event.preventDefault();openAccountSettings()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>
+          Account Settings
+        </a>
+        <div class="dropdown-divider"></div>
+        <a href="index.html" class="dropdown-opt logout" id="opt-logout">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Logout
+        </a>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+      <div class="nav-label">MENU</div>
+      <a href="#" class="nav-item active" data-section="overview" id="nav-overview" onclick="switchSection('overview', this)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        <span>Overview</span>
+      </a>
+      <a href="#" class="nav-item" data-section="inventory" id="nav-inventory" onclick="switchSection('inventory', this)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+        <span>Manage Inventory</span>
+      </a>
+      <a href="#" class="nav-item" data-section="demand" id="nav-demand" onclick="switchSection('demand', this)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <span>Explore Demand</span>
+      </a>
+      <a href="#" class="nav-item" data-section="trends" id="nav-trends" onclick="switchSection('trends', this)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <span>Trends</span>
+      </a>
+      <a href="#" class="nav-item" data-section="alerts" id="nav-alerts" onclick="switchSection('alerts', this)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span>Alerts</span>
+        <span class="nav-badge">3</span>
+      </a>
+      <a href="#" class="nav-item" data-section="analytics" id="nav-analytics" onclick="switchSection('analytics', this)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+        <span>Analytics</span>
+      </a>
+    </nav>
+
+    <!-- Sidebar Footer -->
+    <div class="sidebar-footer">
+      <div class="sidebar-help" onclick="return false;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <span>Help & Support</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content" id="main-content">
+    <!-- OVERVIEW SECTION (default) -->
+    <section class="content-section active" id="section-overview">
+      <!-- Header -->
+      <div class="content-header">
+        <div>
+          <h1 class="page-title" id="page-title">Good evening, Arjun</h1>
+          <p class="page-subtitle">Here's what's happening with your inventory today.</p>
+        </div>
+        <div class="header-date" id="header-date"></div>
+      </div>
+
+      <!-- Stat Cards Row -->
+      <div class="stat-cards" id="stat-cards">
+        <div class="stat-card" id="stat-total-products" style="--delay:0">
+          <div class="stat-icon blue">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>
+          </div>
+          <div class="stat-value" data-target="1248">0</div>
+          <div class="stat-label">Total Products</div>
+          <div class="stat-change positive">+12 this week</div>
+        </div>
+        <div class="stat-card" id="stat-low-stock" style="--delay:1">
+          <div class="stat-icon amber">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div class="stat-value" data-target="23">0</div>
+          <div class="stat-label">Low Stock Items</div>
+          <div class="stat-change negative">+5 since yesterday</div>
+        </div>
+        <div class="stat-card" id="stat-demand-up" style="--delay:2">
+          <div class="stat-icon green">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          </div>
+          <div class="stat-value" data-target="89">0</div>
+          <div class="stat-label">Demand Rising</div>
+          <div class="stat-change positive">Trending products</div>
+        </div>
+        <div class="stat-card" id="stat-alerts" style="--delay:3">
+          <div class="stat-icon red">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          </div>
+          <div class="stat-value" data-target="7">0</div>
+          <div class="stat-label">Active Alerts</div>
+          <div class="stat-change negative">3 critical</div>
+        </div>
+      </div>
+
+      <!-- Two Column Grid -->
+      <div class="dashboard-grid">
+        <!-- Demand Trends Chart -->
+        <div class="dash-card large" id="demand-trend-card">
+          <div class="card-head">
+            <div>
+              <h3 class="card-title">Demand Trends</h3>
+              <p class="card-desc">30-day rolling demand forecast</p>
+            </div>
+            <a href="#" class="card-cta" onclick="switchSection('trends', document.getElementById('nav-trends'))">View Details â†’</a>
+          </div>
+          <div class="chart-area" id="demand-chart-area">
+            <svg id="demand-chart" viewBox="0 0 600 180" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="dGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#4F80FF" stop-opacity="0.3"/>
+                  <stop offset="100%" stop-color="#4F80FF" stop-opacity="0"/>
+                </linearGradient>
+                <linearGradient id="dGrad2" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#00C9A7" stop-opacity="0.2"/>
+                  <stop offset="100%" stop-color="#00C9A7" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+              <!-- Grid -->
+              <line x1="0" y1="45" x2="600" y2="45" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <line x1="0" y1="90" x2="600" y2="90" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <line x1="0" y1="135" x2="600" y2="135" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <!-- Fill -->
+              <path id="d-fill" d="M0,140 C50,130 100,120 150,100 C200,85 250,90 300,70 C350,55 400,60 450,45 C500,35 550,40 600,30 L600,180 L0,180 Z" fill="url(#dGrad)"/>
+              <!-- Line -->
+              <path id="d-line" d="M0,140 C50,130 100,120 150,100 C200,85 250,90 300,70 C350,55 400,60 450,45 C500,35 550,40 600,30" fill="none" stroke="#4F80FF" stroke-width="2" stroke-linecap="round"/>
+              <!-- Secondary -->
+              <path id="d-fill2" d="M0,150 C50,145 100,138 150,130 C200,120 250,115 300,105 C350,95 400,100 450,90 C500,82 550,85 600,78 L600,180 L0,180 Z" fill="url(#dGrad2)"/>
+              <path id="d-line2" d="M0,150 C50,145 100,138 150,130 C200,120 250,115 300,105 C350,95 400,100 450,90 C500,82 550,85 600,78" fill="none" stroke="#00C9A7" stroke-width="1.5" stroke-dasharray="4,3" stroke-linecap="round"/>
+              <!-- Labels -->
+              <text x="10" y="175" fill="#555A65" font-size="10" font-family="Inter">Week 1</text>
+              <text x="145" y="175" fill="#555A65" font-size="10" font-family="Inter">Week 2</text>
+              <text x="290" y="175" fill="#555A65" font-size="10" font-family="Inter">Week 3</text>
+              <text x="440" y="175" fill="#555A65" font-size="10" font-family="Inter">Week 4</text>
+              <text x="565" y="175" fill="#555A65" font-size="10" font-family="Inter">Now</text>
+              <!-- Dot -->
+              <circle cx="600" cy="30" r="4" fill="#4F80FF" opacity="0.8"/>
+              <circle cx="600" cy="30" r="7" fill="none" stroke="#4F80FF" stroke-width="1" opacity="0.3">
+                <animate attributeName="r" values="5;12;5" dur="2s" repeatCount="indefinite"/>
+                <animate attributeName="opacity" values="0.4;0;0.4" dur="2s" repeatCount="indefinite"/>
+              </circle>
+            </svg>
+            <div class="chart-legend">
+              <span class="legend-item"><span class="legend-dot blue"></span>Actual Demand</span>
+              <span class="legend-item"><span class="legend-dot green"></span>Predicted</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Inventory Status -->
+        <div class="dash-card" id="inventory-status-card">
+          <div class="card-head">
+            <div>
+              <h3 class="card-title">Inventory Status</h3>
+              <p class="card-desc">Stock level overview</p>
+            </div>
+            <a href="#" class="card-cta" onclick="switchSection('inventory', document.getElementById('nav-inventory'))">Explore â†’</a>
+          </div>
+          <div class="inv-bars">
+            <div class="inv-bar-item">
+              <div class="inv-bar-label"><span>Healthy Stock</span><span class="inv-bar-val" data-target="68">0%</span></div>
+              <div class="inv-bar-track"><div class="inv-bar-fill green" data-width="68"></div></div>
+            </div>
+            <div class="inv-bar-item">
+              <div class="inv-bar-label"><span>Low Stock</span><span class="inv-bar-val" data-target="19">0%</span></div>
+              <div class="inv-bar-track"><div class="inv-bar-fill amber" data-width="19"></div></div>
+            </div>
+            <div class="inv-bar-item">
+              <div class="inv-bar-label"><span>Out of Stock</span><span class="inv-bar-val" data-target="8">0%</span></div>
+              <div class="inv-bar-track"><div class="inv-bar-fill red" data-width="8"></div></div>
+            </div>
+            <div class="inv-bar-item">
+              <div class="inv-bar-label"><span>Overstock</span><span class="inv-bar-val" data-target="5">0%</span></div>
+              <div class="inv-bar-track"><div class="inv-bar-fill purple" data-width="5"></div></div>
+            </div>
+          </div>
+          <div class="inv-summary">
+            <div class="inv-summary-item">
+              <span class="inv-summary-num">156</span>
+              <span class="inv-summary-label">Need reorder</span>
+            </div>
+            <div class="inv-summary-item">
+              <span class="inv-summary-num">42</span>
+              <span class="inv-summary-label">Overstocked</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Alerts Preview -->
+        <div class="dash-card" id="alerts-preview-card">
+          <div class="card-head">
+            <div>
+              <h3 class="card-title">Recent Alerts</h3>
+              <p class="card-desc">Items needing attention</p>
+            </div>
+            <a href="#" class="card-cta" onclick="switchSection('alerts', document.getElementById('nav-alerts'))">View All â†’</a>
+          </div>
+          <div class="alert-list" id="alert-list">
+            <div class="alert-item critical">
+              <div class="alert-dot"></div>
+              <div class="alert-body">
+                <div class="alert-msg">Running Shoes stock critically low</div>
+                <div class="alert-time">12 units remaining Â· 2 min ago</div>
+              </div>
+            </div>
+            <div class="alert-item warning">
+              <div class="alert-dot"></div>
+              <div class="alert-body">
+                <div class="alert-msg">Wireless Earbuds demand spike detected</div>
+                <div class="alert-time">+41% predicted Â· 15 min ago</div>
+              </div>
+            </div>
+            <div class="alert-item info">
+              <div class="alert-dot"></div>
+              <div class="alert-body">
+                <div class="alert-msg">Yoga Mat reorder recommendation</div>
+                <div class="alert-time">Order 50 units by Friday Â· 1h ago</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top Products -->
+        <div class="dash-card large" id="top-products-card">
+          <div class="card-head">
+            <div>
+              <h3 class="card-title">Top Performing Products</h3>
+              <p class="card-desc">Highest demand this week</p>
+            </div>
+            <a href="#" class="card-cta" onclick="switchSection('demand', document.getElementById('nav-demand'))">Explore â†’</a>
+          </div>
+          <div class="products-row" id="products-row"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INVENTORY MANAGEMENT SECTION -->
+    <section class="content-section" id="section-inventory">
+      <!-- Top Bar -->
+      <div class="inv-topbar">
+        <div class="inv-search-wrap">
+          <input type="text" class="inv-search" id="inv-search-input" placeholder="Search products in your inventoryâ€¦" />
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </div>
+        <button class="inv-add-btn" id="inv-add-btn">âž• Add Product</button>
+      </div>
+
+      <!-- Category Filter Bar -->
+      <div class="inv-filter-bar" id="inv-filter-bar"></div>
+
+      <!-- Back Button -->
+      <button class="inv-back-btn" id="inv-back-btn" onclick="exitFocusedMode()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+        Back to all products
+      </button>
+
+      <!-- Main Layout (morphs between grid and split view) -->
+      <div class="inv-layout" id="inv-layout">
+        <!-- Product Grid / Side List -->
+        <div class="inv-grid" id="inv-product-grid"></div>
+        <!-- Detail Panel (appears on product click) -->
+        <div class="inv-detail-panel" id="inv-detail-panel"></div>
+      </div>
+
+      <!-- Click-outside overlay for exiting focused mode -->
+      <div class="inv-overlay" id="inv-overlay" onclick="exitFocusedMode()"></div>
+    </section>
+
+    <!-- EXPLORE DEMAND SECTION -->
+    <section class="content-section" id="section-demand">
+      <div class="demand-page" id="demand-page">
+        <div class="demand-hero">
+          <div class="demand-tagline">AI-Powered Insights</div>
+          <h1 class="demand-title">Explore Product Demand</h1>
+          <p class="demand-subtitle">Search any product to uncover real-time demand trends and market intelligence.</p>
+        </div>
+        <div class="demand-search-wrap">
+          <input type="text" class="demand-search" id="demand-search-input" placeholder="Search a product to explore demandâ€¦" />
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        </div>
+        <div class="demand-hints">
+          <span class="demand-hint">Smart Watch</span>
+          <span class="demand-hint">Running Shoes</span>
+          <span class="demand-hint">Bluetooth Speaker</span>
+          <span class="demand-hint">Yoga Mat</span>
+        </div>
+        <div class="demand-result" id="demand-result"></div>
+      </div>
+    </section>
+    <!-- TRENDS SECTION -->
+    <section class="content-section" id="section-trends">
+      <div class="trends-layout">
+        <div class="trends-sidebar">
+          <div class="trends-sidebar-title">Categories</div>
+          <div class="trends-cat-list" id="trends-cat-list"></div>
+        </div>
+        <div class="trends-main">
+          <div class="trends-main-header">
+            <h1 class="trends-main-title">Trending Products</h1>
+            <p class="trends-main-sub">Discover what's moving in the market right now.</p>
+          </div>
+          <div id="trends-sections"></div>
+        </div>
+      </div>
+      <div class="trend-modal-overlay" id="trend-modal-overlay"></div>
+    </section>
+
+    <!-- ALERTS SECTION -->
+    <section class="content-section" id="section-alerts">
+      <div class="content-header">
+        <div>
+          <h1 class="page-title">Alerts</h1>
+          <p class="page-subtitle">Actionable notifications to keep your inventory healthy.</p>
+        </div>
+      </div>
+      <div class="alerts-filters" id="alerts-filters"></div>
+      <div class="alerts-split">
+        <div class="alerts-list-panel" id="alerts-list"></div>
+        <div class="alerts-detail-panel" id="alerts-detail"></div>
+      </div>
+    </section>
+
+    <!-- ANALYTICS SECTION -->
+    <section class="content-section" id="section-analytics">
+      <div class="content-header">
+        <div>
+          <h1 class="page-title">Analytics</h1>
+          <p class="page-subtitle">Deep insights into your business performance and predictions.</p>
+        </div>
+      </div>
+
+      <!-- Summary Strip -->
+      <div class="analytics-strip">
+        <div class="analytics-stat"><div class="analytics-stat-icon blue">ðŸ“ˆ</div><div class="analytics-stat-value" data-val="+18% this week">+18% this week</div><div class="analytics-stat-label">Sales Trend</div></div>
+        <div class="analytics-stat"><div class="analytics-stat-icon amber">ðŸ“¦</div><div class="analytics-stat-value" data-val="12 items">12 items</div><div class="analytics-stat-label">Low Stock Items</div></div>
+        <div class="analytics-stat"><div class="analytics-stat-icon green">ðŸ’°</div><div class="analytics-stat-value" data-val="Fitness">Fitness</div><div class="analytics-stat-label">Top Profit Category</div></div>
+        <div class="analytics-stat"><div class="analytics-stat-icon purple">ðŸ”®</div><div class="analytics-stat-value" data-val="Cold Drinks â†‘">Cold Drinks â†‘</div><div class="analytics-stat-label">Next Demand Spike (3 days)</div></div>
+      </div>
+
+      <!-- Sales + Demand Graph -->
+      <div class="an-card">
+        <div class="an-card-head"><div class="an-card-title"><span>ðŸ“Š</span> Sales & Demand Forecast</div><div class="an-card-sub">Past 15 weeks + 5 week prediction</div></div>
+        <div class="an-graph" id="analytics-graph"></div>
+        <div class="an-graph-labels"><span>15w ago</span><span>10w</span><span>5w</span><span>Now</span><span>+5w</span></div>
+        <div class="an-graph-legend"><span class="an-legend-item"><span class="an-legend-dot" style="background:#4F80FF"></span>Actual Sales</span><span class="an-legend-item"><span class="an-legend-line dashed"></span>Predicted Demand</span></div>
+      </div>
+
+      <div class="an-grid">
+        <!-- Inventory Health -->
+        <div class="an-card">
+          <div class="an-card-head"><div class="an-card-title"><span>ðŸ“¦</span> Inventory Health</div></div>
+          <div class="an-health-list">
+            <div class="an-health-item"><div class="an-health-dot red"></div><div class="an-health-name">Running Shoes X1</div><span class="an-health-tag restock">Restock now</span></div>
+            <div class="an-health-item"><div class="an-health-dot red"></div><div class="an-health-name">Water Bottle Steel</div><span class="an-health-tag restock">Restock now</span></div>
+            <div class="an-health-item"><div class="an-health-dot green"></div><div class="an-health-name">Smart Watch Pro</div><span class="an-health-tag safe">Healthy</span></div>
+            <div class="an-health-item"><div class="an-health-dot green"></div><div class="an-health-name">USB-C Hub Ultra</div><span class="an-health-tag safe">Healthy</span></div>
+            <div class="an-health-item"><div class="an-health-dot blue"></div><div class="an-health-name">Trail Mix Organic</div><span class="an-health-tag reduce">Reduce orders</span></div>
+          </div>
+        </div>
+
+        <!-- Top Performing -->
+        <div class="an-card">
+          <div class="an-card-head"><div class="an-card-title"><span>ðŸ†</span> Top Performing Products</div></div>
+          <div class="an-top-list">
+            <div class="an-top-item"><div class="an-top-rank">1</div><div class="an-top-name">Resistance Bands</div><span class="an-top-growth">+82%</span><span class="an-top-profit">$2.4K</span></div>
+            <div class="an-top-item"><div class="an-top-rank">2</div><div class="an-top-name">Bluetooth Speaker</div><span class="an-top-growth">+68%</span><span class="an-top-profit">$3.1K</span></div>
+            <div class="an-top-item"><div class="an-top-rank">3</div><div class="an-top-name">Smart Watch Pro</div><span class="an-top-growth">+54%</span><span class="an-top-profit">$5.8K</span></div>
+            <div class="an-top-item"><div class="an-top-rank">4</div><div class="an-top-name">Running Shoes X1</div><span class="an-top-growth">+47%</span><span class="an-top-profit">$1.9K</span></div>
+            <div class="an-top-item"><div class="an-top-rank">5</div><div class="an-top-name">Yoga Mat Premium</div><span class="an-top-growth">+35%</span><span class="an-top-profit">$0.8K</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Risk Alerts -->
+      <div class="an-card">
+        <div class="an-card-head"><div class="an-card-title"><span>âš ï¸</span> Risk Alerts</div></div>
+        <div class="an-risk-list">
+          <div class="an-risk-item"><span class="an-risk-icon">ðŸ”´</span><div class="an-risk-text">You may <strong>run out of Running Shoes</strong> in 2 days at current sell rate. Restock urgently.</div></div>
+          <div class="an-risk-item"><span class="an-risk-icon">ðŸŸ¡</span><div class="an-risk-text"><strong>Trail Mix Organic</strong> overstock may cause $450+ in holding costs this month. Consider discounting.</div></div>
+          <div class="an-risk-item"><span class="an-risk-icon">ðŸ”´</span><div class="an-risk-text"><strong>Protein Bars</strong> batch expiring in 12 days â€” 45 units unsold. Immediate action needed.</div></div>
+        </div>
+      </div>
+
+      <div class="an-grid">
+        <!-- Demand Predictions -->
+        <div class="an-card">
+          <div class="an-card-head"><div class="an-card-title"><span>ðŸ”®</span> Demand Predictions</div></div>
+          <div class="an-predict-list">
+            <div class="an-predict-item"><span class="an-predict-emoji">ðŸ¥¤</span><div class="an-predict-text">People will likely buy <strong>more cold drinks</strong> next week due to rising temperatures.</div></div>
+            <div class="an-predict-item"><span class="an-predict-emoji">ðŸ’ª</span><div class="an-predict-text"><strong>Fitness equipment</strong> demand expected to peak â€” best time to restock resistance bands.</div></div>
+            <div class="an-predict-item"><span class="an-predict-emoji">ðŸŽ’</span><div class="an-predict-text">Backpack demand will <strong>recover in 3 weeks</strong> as travel season approaches.</div></div>
+          </div>
+        </div>
+
+        <!-- Category Insights -->
+        <div class="an-card">
+          <div class="an-card-head"><div class="an-card-title"><span>ðŸ“Š</span> Category Performance</div></div>
+          <div class="an-cat-bars">
+            <div class="an-cat-item"><span class="an-cat-label">Electronics</span><div class="an-cat-track"><div class="an-cat-fill blue" data-width="82" style="width:0"></div></div><span class="an-cat-val">82%</span></div>
+            <div class="an-cat-item"><span class="an-cat-label">Fitness</span><div class="an-cat-track"><div class="an-cat-fill green" data-width="74" style="width:0"></div></div><span class="an-cat-val">74%</span></div>
+            <div class="an-cat-item"><span class="an-cat-label">Lifestyle</span><div class="an-cat-track"><div class="an-cat-fill amber" data-width="58" style="width:0"></div></div><span class="an-cat-val">58%</span></div>
+            <div class="an-cat-item"><span class="an-cat-label">Food</span><div class="an-cat-track"><div class="an-cat-fill purple" data-width="45" style="width:0"></div></div><span class="an-cat-val">45%</span></div>
+            <div class="an-cat-item"><span class="an-cat-label">Bags</span><div class="an-cat-track"><div class="an-cat-fill red" data-width="28" style="width:0"></div></div><span class="an-cat-val">28%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Smart Suggestions -->
+      <div class="an-card">
+        <div class="an-card-head"><div class="an-card-title"><span>ðŸ§ </span> Smart Suggestions</div><div class="an-card-sub">AI-powered recommendations</div></div>
+        <div class="an-suggest-list">
+          <div class="an-suggest-item"><span class="an-suggest-icon">ðŸ“¦</span><div class="an-suggest-text"><strong>Increase stock of Resistance Bands</strong> â€” demand is rising 28% monthly with low competition.</div></div>
+          <div class="an-suggest-item"><span class="an-suggest-icon">ðŸŽ</span><div class="an-suggest-text"><strong>Bundle Yoga Mat + Resistance Bands</strong> â€” customers frequently buy both. Could boost AOV by 22%.</div></div>
+          <div class="an-suggest-item"><span class="an-suggest-icon">ðŸ“‰</span><div class="an-suggest-text"><strong>Reduce Trail Mix orders by 50%</strong> â€” demand has fallen post-season. Current stock lasts 6+ weeks.</div></div>
+          <div class="an-suggest-item"><span class="an-suggest-icon">ðŸ’°</span><div class="an-suggest-text"><strong>Run a flash sale on Backpacks</strong> â€” clear aging inventory before new travel season models arrive.</div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ADD PRODUCT â€” Overlay -->
+  <div class="ap-overlay" id="ap-overlay"></div>
+
+  <!-- ADD PRODUCT â€” Slide Panel -->
+  <div class="ap-panel" id="ap-panel">
+    <div class="ap-header">
+      <div class="ap-header-left">
+        <div class="ap-header-icon">ðŸ“¦</div>
+        <div>
+          <div class="ap-header-title">Add New Product</div>
+          <div class="ap-header-sub">Fill in details to add to inventory</div>
+        </div>
+      </div>
+      <button class="ap-close-btn" id="ap-close-btn" onclick="closeAddProduct()">âœ•</button>
+    </div>
+
+    <!-- Quick Mode Toggle -->
+    <div class="ap-mode-bar">
+      <span class="ap-mode-label">Quick Add Mode</span>
+      <button class="ap-mode-toggle" id="ap-quick-toggle" onclick="toggleQuickMode()"></button>
+      <span class="ap-mode-badge">âš¡ Fast</span>
+    </div>
+
+    <div class="ap-body" id="ap-body">
+      <!-- 1. BASIC INFO -->
+      <div class="ap-section" id="ap-sec-basic">
+        <div class="ap-section-title"><span>ðŸ“‹</span> Basic Information</div>
+        <div class="ap-field">
+          <label class="ap-label">Product Name <span class="ap-required">*</span></label>
+          <input type="text" class="ap-input" id="ap-name" placeholder="e.g. Smart Watch Pro" />
+        </div>
+        <div class="ap-row">
+          <div class="ap-field">
+            <label class="ap-label">Category</label>
+            <select class="ap-select" id="ap-category">
+              <option value="">Select category</option>
+              <option value="Electronics">Electronics</option>
+              <option value="Fitness">Fitness</option>
+              <option value="Footwear">Footwear</option>
+              <option value="Accessories">Accessories</option>
+              <option value="Bags">Bags</option>
+              <option value="Home Office">Home Office</option>
+              <option value="Lifestyle">Lifestyle</option>
+              <option value="Food">Food</option>
+              <option value="Fashion">Fashion</option>
+            </select>
+          </div>
+          <div class="ap-field">
+            <label class="ap-label">SKU</label>
+            <input type="text" class="ap-input" id="ap-sku" placeholder="Auto-generated" />
+          </div>
+        </div>
+        <div class="ap-row">
+          <div class="ap-field">
+            <label class="ap-label">Price ($) <span class="ap-required">*</span></label>
+            <input type="number" class="ap-input" id="ap-price" placeholder="0.00" min="0" step="0.01" />
+          </div>
+          <div class="ap-field ap-advanced-field">
+            <label class="ap-label">Cost Price ($)</label>
+            <input type="number" class="ap-input" id="ap-cost" placeholder="0.00" min="0" step="0.01" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. INVENTORY -->
+      <div class="ap-section ap-full-field" id="ap-sec-inventory">
+        <div class="ap-section-title"><span>ðŸ“Š</span> Inventory</div>
+        <div class="ap-row">
+          <div class="ap-field">
+            <label class="ap-label">Stock Quantity <span class="ap-required">*</span></label>
+            <input type="number" class="ap-input" id="ap-stock" placeholder="0" min="0" />
+          </div>
+          <div class="ap-field ap-advanced-field">
+            <label class="ap-label">Min Threshold</label>
+            <input type="number" class="ap-input" id="ap-threshold" placeholder="10" min="0" />
+          </div>
+        </div>
+        <div class="ap-row ap-advanced-field">
+          <div class="ap-field">
+            <label class="ap-label">Unit</label>
+            <select class="ap-select" id="ap-unit">
+              <option value="pcs">Pieces (pcs)</option>
+              <option value="kg">Kilograms (kg)</option>
+              <option value="ltr">Litres (ltr)</option>
+              <option value="box">Boxes</option>
+              <option value="set">Sets</option>
+            </select>
+          </div>
+          <div class="ap-field" style="justify-content:flex-end;">
+            <div class="ap-toggle-row" style="margin-bottom:0;">
+              <div class="ap-toggle-info">
+                <div class="ap-toggle-name">Track Inventory</div>
+              </div>
+              <button class="ap-toggle on" id="ap-track-toggle" onclick="this.classList.toggle('on')"></button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. DEMAND PREDICTION -->
+      <div class="ap-section ap-full-field" id="ap-sec-demand">
+        <div class="ap-section-title"><span>ðŸ”®</span> Smart Demand</div>
+        <div class="ap-toggle-row">
+          <div class="ap-toggle-info">
+            <div class="ap-toggle-name">Auto Predict Demand</div>
+            <div class="ap-toggle-desc">AI-powered demand estimation</div>
+          </div>
+          <button class="ap-toggle" id="ap-demand-toggle" onclick="toggleDemandPredict()"></button>
+        </div>
+        <div class="ap-predict-card" id="ap-predict-card">
+          <div class="ap-predict-icon">ðŸ§ </div>
+          <div class="ap-predict-text" id="ap-predict-text">
+            Recommended stock: <strong>120 units</strong> (based on category demand trends)
+          </div>
+          <div class="ap-predict-edit" onclick="applyPrediction()">
+            â†— Apply to stock field
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. MEDIA -->
+      <div class="ap-section ap-full-field" id="ap-sec-media">
+        <div class="ap-section-title"><span>ðŸ–¼ï¸</span> Product Images</div>
+        <div class="ap-upload-zone" id="ap-upload-zone">
+          <input type="file" class="ap-upload-input" id="ap-file-input" multiple accept="image/*" />
+          <div class="ap-upload-icon">ðŸ“</div>
+          <div class="ap-upload-text">Drag & drop images here, or click to browse</div>
+          <div class="ap-upload-hint">PNG, JPG up to 5MB</div>
+        </div>
+        <div class="ap-thumbnails" id="ap-thumbnails"></div>
+      </div>
+
+      <!-- 5. ADVANCED (Collapsible) -->
+      <div class="ap-section ap-full-field" id="ap-sec-advanced">
+        <button class="ap-collapse-trigger" id="ap-adv-trigger" onclick="toggleAdvancedSection()">
+          <div class="ap-section-title" style="margin-bottom:0;"><span>âš™ï¸</span> Advanced Options</div>
+          <svg class="ap-collapse-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="ap-collapse-body" id="ap-adv-body">
+          <div class="ap-field" style="margin-top:14px;">
+            <label class="ap-label">Supplier Name</label>
+            <input type="text" class="ap-input" id="ap-supplier" placeholder="e.g. Global Supplies Inc." />
+          </div>
+          <div class="ap-field">
+            <label class="ap-label">Tags</label>
+            <div class="ap-tags-wrap" id="ap-tags-wrap" onclick="document.getElementById('ap-tags-input').focus()">
+              <input type="text" class="ap-tags-input" id="ap-tags-input" placeholder="Type and press Enterâ€¦" />
+            </div>
+            <div class="ap-tag-suggest" id="ap-tag-suggest">
+              <span class="ap-tag-suggest-item" onclick="addTag('bestseller')">bestseller</span>
+              <span class="ap-tag-suggest-item" onclick="addTag('new')">new</span>
+              <span class="ap-tag-suggest-item" onclick="addTag('seasonal')">seasonal</span>
+              <span class="ap-tag-suggest-item" onclick="addTag('premium')">premium</span>
+              <span class="ap-tag-suggest-item" onclick="addTag('eco-friendly')">eco-friendly</span>
+            </div>
+          </div>
+          <div class="ap-field">
+            <label class="ap-label">Expiry Date</label>
+            <input type="date" class="ap-input" id="ap-expiry" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Action Bar -->
+    <div class="ap-footer">
+      <button class="ap-btn cancel" onclick="closeAddProduct()">Cancel</button>
+      <div class="ap-footer-spacer"></div>
+      <button class="ap-btn secondary" id="ap-save-another" disabled onclick="saveProduct(true)">
+        <span class="ap-spinner"></span> Save & Add Another
+      </button>
+      <button class="ap-btn primary" id="ap-save" disabled onclick="saveProduct(false)">
+        <span class="ap-spinner"></span> Save Product
+      </button>
+    </div>
+  </div>
+
+  <!-- Floating Action Button -->
+  <button class="ap-fab" id="ap-fab" onclick="openAddProduct()" title="Add Product">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+
+  <!-- Success Animation Overlay -->
+  <div class="ap-success-overlay" id="ap-success-overlay">
+    <div class="ap-success-card">
+      <div class="ap-success-check">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div class="ap-success-title">Product Added! ðŸŽ‰</div>
+      <div class="ap-success-sub" id="ap-success-sub">Your product has been added to inventory.</div>
+    </div>
+  </div>
+
+  <script src="api.js"></script>
+  <script>
+    // Auth guard: if no token, bounce to landing page.
+    if (!window.Auth || !window.Auth.isLoggedIn()) {
+      window.location.replace('index.html');
+    }
+  </script>
+  <script src="dashboard.js"></script>
+  <script src="inventory.js"></script>
+  <script src="add-product.js"></script>
+  <script src="demand.js"></script>
+  <script src="trends.js"></script>
+  <script src="alerts.js"></script>
+  <script>
+// ═══════════════════════════════════════
+// PROFILE & SETTINGS MODALS
+// ═══════════════════════════════════════
+
+function openEditProfile() {
+  document.getElementById('profile-section').classList.remove('open');
+  removeProfileModal();
+  const modal = document.createElement('div');
+  modal.id = 'profile-modal-overlay';
+  modal.className = 'alert-modal-overlay';
+  modal.innerHTML = `
+    <div class="alert-modal" onclick="event.stopPropagation()" style="max-width:480px">
+      <div class="alert-modal-header">
+        <div class="alert-modal-icon">ðŸ‘¤</div>
+        <div>
+          <div class="alert-modal-title">Edit Profile</div>
+          <div class="alert-modal-sub">Update your personal information</div>
+        </div>
+        <button class="alert-modal-close" onclick="closeProfileModal()">âœ•</button>
+      </div>
+      <div class="alert-modal-body">
+        <div class="alert-modal-field">
+          <label class="alert-modal-label">Full Name</label>
+          <input type="text" class="alert-modal-input" id="profile-name-input" value="Arjun Kumar" style="text-align:left;font-size:14px;font-weight:500" />
+        </div>
+        <div class="alert-modal-field">
+          <label class="alert-modal-label">Email Address</label>
+          <input type="email" class="alert-modal-input" id="profile-email-input" value="arjun@demandos.io" style="text-align:left;font-size:14px;font-weight:500" />
+        </div>
+        <div class="alert-modal-field">
+          <label class="alert-modal-label">Business Role</label>
+          <div class="alert-modal-options">
+            <button class="alert-modal-option active" onclick="selectOption(this)">Business Owner</button>
+            <button class="alert-modal-option" onclick="selectOption(this)">Manager</button>
+            <button class="alert-modal-option" onclick="selectOption(this)">Analyst</button>
+          </div>
+        </div>
+        <div class="alert-modal-field">
+          <label class="alert-modal-label">Location</label>
+          <input type="text" class="alert-modal-input" id="profile-loc-input" value="Mumbai, India" style="text-align:left;font-size:14px;font-weight:500" />
+        </div>
+      </div>
+      <div class="alert-modal-footer">
+        <button class="alert-action-btn ghost" onclick="closeProfileModal()">Cancel</button>
+        <button class="alert-action-btn primary" onclick="saveProfile()">Save Changes</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  requestAnimationFrame(() => modal.classList.add('visible'));
+  modal.onclick = closeProfileModal;
+}
+
+function saveProfile() {
+  const name = document.getElementById('profile-name-input')?.value || 'Arjun Kumar';
+  const nameEl = document.getElementById('profile-name');
+  if (nameEl) nameEl.textContent = name;
+  const avatarEl = document.getElementById('profile-avatar');
+  if (avatarEl) {
+    const parts = name.trim().split(' ');
+    avatarEl.textContent = (parts[0]?.[0] || '') + (parts[1]?.[0] || '');
+  }
+  closeProfileModal();
+  if (typeof showFeedback === 'function') showFeedback('âœ… Profile updated successfully!', 'success');
+}
+
+function openAccountSettings() {
+  document.getElementById('profile-section').classList.remove('open');
+  removeProfileModal();
+  const modal = document.createElement('div');
+  modal.id = 'profile-modal-overlay';
+  modal.className = 'alert-modal-overlay';
+  modal.innerHTML = `
+    <div class="alert-modal" onclick="event.stopPropagation()" style="max-width:480px">
+      <div class="alert-modal-header">
+        <div class="alert-modal-icon">âš™ï¸</div>
+        <div>
+          <div class="alert-modal-title">Account Settings</div>
+          <div class="alert-modal-sub">Manage your preferences</div>
+        </div>
+        <button class="alert-modal-close" onclick="closeProfileModal()">âœ•</button>
+      </div>
+      <div class="alert-modal-body">
+        <div class="alert-modal-field">
+          <label class="alert-modal-label">Notifications</label>
+          <div class="alert-modal-options">
+            <button class="alert-modal-option active" onclick="selectOption(this)">All Alerts</button>
+            <button class="alert-modal-option" onclick="selectOption(this)">Critical Only</button>
+            <button class="alert-modal-option" onclick="selectOption(this)">Off</button>
+          </div>
+        </div>
+        <div class="alert-modal-field">
+          <label class="alert-modal-label">Theme</label>
+          <div class="alert-modal-options">
+            <button class="alert-modal-option active" onclick="selectOption(this)">ðŸŒ™ Dark</button>
+            <button class="alert-modal-option" onclick="selectOption(this)">â˜€ï¸ Light</button>
+            <button class="alert-modal-option" onclick="selectOption(this)">ðŸ–¥ï¸ System</button>
+          </div>
+        </div>
+        <div class="alert-modal-field">
+          <label class="alert-modal-label">Data Refresh Rate</label>
+          <div class="alert-modal-options">
+            <button class="alert-modal-option" onclick="selectOption(this)">Real-time</button>
+            <button class="alert-modal-option active" onclick="selectOption(this)">Every 5 min</button>
+            <button class="alert-modal-option" onclick="selectOption(this)">Manual</button>
+          </div>
+        </div>
+        <div class="alert-modal-info">
+          <span>ðŸ’¡</span>
+          <span>Changes are saved automatically</span>
+        </div>
+      </div>
+      <div class="alert-modal-footer">
+        <button class="alert-action-btn ghost" onclick="closeProfileModal()">Close</button>
+        <button class="alert-action-btn primary" onclick="saveSettings()">Save Settings</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  requestAnimationFrame(() => modal.classList.add('visible'));
+  modal.onclick = closeProfileModal;
+}
+
+function saveSettings() {
+  closeProfileModal();
+  if (typeof showFeedback === 'function') showFeedback('âœ… Settings saved successfully!', 'success');
+}
+
+function removeProfileModal() {
+  const existing = document.getElementById('profile-modal-overlay');
+  if (existing) existing.remove();
+}
+
+function closeProfileModal() {
+  const modal = document.getElementById('profile-modal-overlay');
+  if (modal) {
+    modal.classList.remove('visible');
+    setTimeout(() => modal.remove(), 300);
+  }
+}
+  </script>
+
+  <script>
+// ═══════════════════════════════════════
+// ANALYTICS PAGE â€” JS
+// ═══════════════════════════════════════
+
+function initAnalytics() {
+  animateAnalyticsBars();
+  animateAnalyticsCounters();
+}
+
+function animateAnalyticsBars() {
+  document.querySelectorAll('#section-analytics .an-cat-fill').forEach(bar => {
+    const w = bar.dataset.width;
+    if (w) setTimeout(() => { bar.style.width = w + '%'; }, 400);
+  });
+}
+
+function animateAnalyticsCounters() {
+  document.querySelectorAll('#section-analytics .analytics-stat-value[data-val]').forEach(el => {
+    const target = el.dataset.val;
+    // Simple text set with a slight delay for stagger effect
+    setTimeout(() => { el.textContent = target; }, 300);
+  });
+}
+
+function buildAnalyticsGraph() {
+  // Sales data (past)
+  const sales = [42,45,40,48,55,52,60,58,65,70,68,75,80,78,85];
+  // Predicted data (future, starts from last sales point)
+  const predicted = [null,null,null,null,null,null,null,null,null,null,null,null,80,88,95,102,98];
+
+  const w = 700, h = 180;
+  const allPts = sales;
+  const mx = Math.max(...sales, ...predicted.filter(v=>v!==null)) * 1.15;
+
+  // Sales line
+  const sXs = allPts.map((_, i) => (i / (allPts.length - 1)) * w);
+  const sYs = allPts.map(p => h - ((p / mx) * h * 0.85) - 8);
+  let salesPath = `M ${sXs[0]},${sYs[0]}`;
+  for (let i = 1; i < allPts.length; i++) {
+    const cpx = (sXs[i-1]+sXs[i])/2;
+    salesPath += ` C ${cpx},${sYs[i-1]} ${cpx},${sYs[i]} ${sXs[i]},${sYs[i]}`;
+  }
+
+  // Predicted line
+  const predPts = predicted.filter(v => v !== null);
+  const predStartIdx = predicted.indexOf(predPts[0]);
+  const pXs = predPts.map((_, i) => ((predStartIdx + i) / (predicted.length - 1)) * w);
+  const pYs = predPts.map(p => h - ((p / mx) * h * 0.85) - 8);
+  let predPath = `M ${pXs[0]},${pYs[0]}`;
+  for (let i = 1; i < predPts.length; i++) {
+    const cpx = (pXs[i-1]+pXs[i])/2;
+    predPath += ` C ${cpx},${pYs[i-1]} ${cpx},${pYs[i]} ${pXs[i]},${pYs[i]}`;
+  }
+
+  const salesFill = salesPath + ` L ${sXs[sXs.length-1]},${h} L ${sXs[0]},${h} Z`;
+
+  return { salesPath, predPath, salesFill, w, h };
+}
+
+function getAnalyticsGraphSVG() {
+  const g = buildAnalyticsGraph();
+  return `<svg viewBox="0 0 ${g.w} ${g.h}" preserveAspectRatio="none">
+    <line x1="0" y1="45" x2="${g.w}" y2="45" stroke="rgba(255,255,255,.03)"/>
+    <line x1="0" y1="90" x2="${g.w}" y2="90" stroke="rgba(255,255,255,.03)"/>
+    <line x1="0" y1="135" x2="${g.w}" y2="135" stroke="rgba(255,255,255,.03)"/>
+    <path class="an-graph-fill" d="${g.salesFill}" fill="rgba(79,128,255,.1)"/>
+    <path class="an-graph-line" d="${g.salesPath}" stroke="#4F80FF"/>
+    <path class="an-graph-line predicted" d="${g.predPath}" stroke="#00C9A7"/>
+  </svg>`;
+}
+
+// Build graph on init
+window.addEventListener('load', () => {
+  const graphEl = document.getElementById('analytics-graph');
+  if (graphEl) graphEl.innerHTML = getAnalyticsGraphSVG();
+});
+  </script>
+</body>
+</html>
