@@ -138,9 +138,141 @@ function renderTopProducts() {
 }
 
 // ═══════════════════════════════════════
+// LIVE BACKEND METRICS & CHART.JS WIRING
+// ═══════════════════════════════════════
+
+// Update the 4 top stat cards from /api/analytics/dashboard
+async function loadLiveMetrics() {
+  if (!window.api || !window.Auth || !window.Auth.isLoggedIn()) return;
+  try {
+    const m = await window.api('/api/analytics/dashboard');
+    const setStat = (selector, value) => {
+      const el = document.querySelector(selector + ' .stat-value');
+      if (!el) return;
+      el.dataset.target = value;
+      el.textContent = value;
+    };
+    setStat('#stat-total-products', m.totalProducts ?? 0);
+    setStat('#stat-low-stock', m.lowStockProducts ?? 0);
+    setStat('#stat-demand-up', m.fastMovingProducts ?? 0);
+    setStat('#stat-alerts', m.lowStockProducts ?? 0);
+
+    // Also show total value as the subtext under "Total Products"
+    const change = document.querySelector('#stat-total-products .stat-change');
+    if (change) {
+      const v = Number(m.totalInventoryValue || 0);
+      change.textContent = `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })} inventory value`;
+      change.classList.remove('negative');
+      change.classList.add('positive');
+    }
+  } catch (err) {
+    console.error('[metrics] load failed:', err.message);
+    if (err.status === 401 && window.Auth) window.Auth.logout();
+  }
+}
+
+let _stockChart = null;
+let _salesChart = null;
+
+async function renderLiveCharts() {
+  if (!window.api || !window.Auth || !window.Auth.isLoggedIn() || !window.Chart) return;
+
+  // Shared theme
+  Chart.defaults.color = 'rgba(230,230,235,0.75)';
+  Chart.defaults.borderColor = 'rgba(255,255,255,0.08)';
+  Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+
+  // ── Stock by Category (doughnut)
+  try {
+    const s = await window.api('/api/analytics/stock-summary');
+    const canvas = document.getElementById('chart-stock-summary');
+    const empty = document.getElementById('chart-stock-empty');
+    if (canvas) {
+      const hasData = Array.isArray(s.data) && s.data.length > 0 && s.data.some(v => v > 0);
+      canvas.style.display = hasData ? '' : 'none';
+      if (empty) empty.style.display = hasData ? 'none' : '';
+      if (hasData) {
+        if (_stockChart) _stockChart.destroy();
+        _stockChart = new Chart(canvas.getContext('2d'), {
+          type: 'doughnut',
+          data: {
+            labels: s.labels,
+            datasets: [{
+              data: s.data,
+              backgroundColor: ['#4F80FF','#00C9A7','#9D6FFF','#F5A623','#FF5E7A','#3DD5F3','#B8E986','#E94E77'],
+              borderColor: 'rgba(15,17,21,0.9)',
+              borderWidth: 2,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '62%',
+            plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 14 } } },
+          },
+        });
+      }
+    }
+  } catch (err) {
+    console.error('[stock-summary]', err.message);
+  }
+
+  // ── Monthly Sales (line)
+  try {
+    const s = await window.api('/api/analytics/monthly-sales');
+    const canvas = document.getElementById('chart-monthly-sales');
+    const empty = document.getElementById('chart-monthly-empty');
+    if (canvas) {
+      const hasData = Array.isArray(s.data) && s.data.length > 0;
+      canvas.style.display = hasData ? '' : 'none';
+      if (empty) empty.style.display = hasData ? 'none' : '';
+      if (hasData) {
+        if (_salesChart) _salesChart.destroy();
+        _salesChart = new Chart(canvas.getContext('2d'), {
+          type: 'line',
+          data: {
+            labels: s.labels,
+            datasets: [{
+              label: 'Units sold',
+              data: s.data,
+              borderColor: '#4F80FF',
+              backgroundColor: 'rgba(79,128,255,0.15)',
+              fill: true,
+              tension: 0.35,
+              pointBackgroundColor: '#4F80FF',
+              pointRadius: 4,
+              pointHoverRadius: 6,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: { beginAtZero: true, ticks: { precision: 0 } },
+              x: { grid: { display: false } },
+            },
+          },
+        });
+      }
+    }
+  } catch (err) {
+    console.error('[monthly-sales]', err.message);
+  }
+}
+
+// Re-fetch after inventory changes (add/delete/edit)
+window.refreshLiveDashboard = async function refreshLiveDashboard() {
+  await loadLiveMetrics();
+  await renderLiveCharts();
+};
+
+// ═══════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════
 window.addEventListener('load', () => {
   renderTopProducts();
   setTimeout(animateOverview, 200);
+  // Kick off live backend wiring
+  window.refreshLiveDashboard && window.refreshLiveDashboard();
 });

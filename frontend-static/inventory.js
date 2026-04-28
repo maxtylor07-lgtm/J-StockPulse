@@ -72,6 +72,7 @@ async function loadProductsFromAPI() {
     inventoryProducts.splice(0, inventoryProducts.length, ...mapped);
     renderInventoryGrid();
     if (typeof updateDashboardCounts === 'function') updateDashboardCounts();
+    if (window.refreshLiveDashboard) window.refreshLiveDashboard();
   } catch (err) {
     console.error('[inventory] load failed:', err.message);
     if (err.status === 401 && window.Auth) window.Auth.logout();
@@ -154,6 +155,14 @@ function renderInventoryGrid() {
         <div class="inv-card-status ${p.stockLevel}">
           <span class="inv-card-status-dot"></span>
           ${stockLabel}
+        </div>
+        <div class="inv-card-actions" onclick="event.stopPropagation()">
+          <button class="inv-card-btn edit" title="Edit" data-testid="inv-edit-btn" onclick="event.stopPropagation();openEditProduct('${p.id}')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          </button>
+          <button class="inv-card-btn delete" title="Delete" data-testid="inv-delete-btn" onclick="event.stopPropagation();confirmDeleteProduct('${p.id}')">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
+          </button>
         </div>
       </div>
       <div class="inv-card-body">
@@ -395,3 +404,131 @@ window.addEventListener('load', () => {
     }
   }, 100);
 });
+
+// ═══════════ EDIT / DELETE MODALS ═══════════
+function _ensureModalContainer() {
+  if (document.getElementById('sp-modal-root')) return;
+  const root = document.createElement('div');
+  root.id = 'sp-modal-root';
+  document.body.appendChild(root);
+}
+
+function _closeModal() {
+  const m = document.querySelector('.sp-modal.open');
+  if (m) m.classList.remove('open');
+  setTimeout(() => {
+    const root = document.getElementById('sp-modal-root');
+    if (root) root.innerHTML = '';
+  }, 180);
+}
+
+// ─── DELETE confirmation ───
+window.confirmDeleteProduct = function confirmDeleteProduct(productId) {
+  const p = inventoryProducts.find(x => String(x.id) === String(productId));
+  if (!p) return;
+  _ensureModalContainer();
+  const root = document.getElementById('sp-modal-root');
+  root.innerHTML = `
+    <div class="sp-modal open" id="del-modal" data-testid="delete-modal">
+      <div class="sp-modal-card">
+        <div class="sp-modal-title">Delete "${p.name}"?</div>
+        <div class="sp-modal-desc">This permanently removes the product and all its linked analytics. This action cannot be undone.</div>
+        <div class="sp-modal-actions">
+          <button class="sp-btn ghost" data-testid="delete-cancel" id="del-cancel">Cancel</button>
+          <button class="sp-btn danger" data-testid="delete-confirm" id="del-confirm">Delete</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('del-cancel').onclick = _closeModal;
+  document.getElementById('del-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'del-modal') _closeModal();
+  });
+  document.getElementById('del-confirm').onclick = async (e) => {
+    e.target.disabled = true;
+    e.target.textContent = 'Deleting…';
+    const ok = await apiDeleteProduct(p.id);
+    if (!ok) { e.target.disabled = false; e.target.textContent = 'Delete'; return; }
+    // Remove locally + re-render
+    const idx = inventoryProducts.findIndex(x => String(x.id) === String(productId));
+    if (idx >= 0) inventoryProducts.splice(idx, 1);
+    if (invFocusedMode && String(invSelectedId) === String(productId)) exitFocusedMode();
+    renderInventoryGrid();
+    if (typeof updateDashboardCounts === 'function') updateDashboardCounts();
+    if (window.refreshLiveDashboard) window.refreshLiveDashboard();
+    _closeModal();
+  };
+};
+
+// ─── EDIT modal ───
+window.openEditProduct = function openEditProduct(productId) {
+  const p = inventoryProducts.find(x => String(x.id) === String(productId));
+  if (!p) return;
+  _ensureModalContainer();
+  const root = document.getElementById('sp-modal-root');
+  const currentPrice = Array.isArray(p.price) ? p.price[1] : p.price;
+  root.innerHTML = `
+    <div class="sp-modal open" id="edit-modal" data-testid="edit-modal">
+      <div class="sp-modal-card">
+        <div class="sp-modal-title">Edit product</div>
+        <div class="sp-modal-desc">Update the details for <strong>${p.name}</strong>.</div>
+        <div class="sp-modal-row">
+          <label>Name</label>
+          <input id="edit-name" type="text" value="${(p.name || '').replace(/"/g, '&quot;')}" data-testid="edit-name" />
+        </div>
+        <div class="sp-modal-row">
+          <label>Category</label>
+          <input id="edit-category" type="text" value="${p.category || ''}" data-testid="edit-category" />
+        </div>
+        <div class="sp-modal-row">
+          <label>Quantity in stock</label>
+          <input id="edit-quantity" type="number" min="0" value="${p.stock || 0}" data-testid="edit-quantity" />
+        </div>
+        <div class="sp-modal-row">
+          <label>Price</label>
+          <input id="edit-price" type="number" min="0" step="0.01" value="${currentPrice || 0}" data-testid="edit-price" />
+        </div>
+        <div class="sp-modal-actions">
+          <button class="sp-btn ghost" id="edit-cancel" data-testid="edit-cancel">Cancel</button>
+          <button class="sp-btn primary" id="edit-save" data-testid="edit-save">Save changes</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('edit-cancel').onclick = _closeModal;
+  document.getElementById('edit-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'edit-modal') _closeModal();
+  });
+  document.getElementById('edit-save').onclick = async (e) => {
+    const btn = e.target;
+    const patch = {
+      name: document.getElementById('edit-name').value.trim(),
+      category: document.getElementById('edit-category').value.trim() || 'Uncategorized',
+      quantity: Number(document.getElementById('edit-quantity').value) || 0,
+      price: Number(document.getElementById('edit-price').value) || 0,
+    };
+    if (!patch.name) { alert('Name is required'); return; }
+    btn.disabled = true;
+    btn.textContent = 'Saving…';
+    try {
+      if (window.api && window.Auth && window.Auth.isLoggedIn()) {
+        await window.api(`/api/products/update/${p.id}`, { method: 'PUT', body: patch });
+      }
+      // Sync locally
+      p.name = patch.name;
+      p.category = patch.category;
+      p.stock = patch.quantity;
+      p.price = [Math.round(patch.price * 0.7), patch.price];
+      const threshold = 10;
+      if (patch.quantity <= threshold) p.stockLevel = 'critical';
+      else if (patch.quantity <= threshold * 3) p.stockLevel = 'low';
+      else p.stockLevel = 'healthy';
+      renderInventoryGrid();
+      if (typeof updateDashboardCounts === 'function') updateDashboardCounts();
+      if (window.refreshLiveDashboard) window.refreshLiveDashboard();
+      _closeModal();
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = 'Save changes';
+      alert('Update failed: ' + err.message);
+    }
+  };
+};

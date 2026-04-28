@@ -357,6 +357,7 @@ function saveProduct(addAnother) {
 
     inventoryProducts.unshift(newProduct);
     updateDashboardCounts();
+    if (window.refreshLiveDashboard) window.refreshLiveDashboard();
     if (saveBtn) saveBtn.classList.remove('saving');
 
     if (addAnother) {

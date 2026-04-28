@@ -236,6 +236,34 @@
         </div>
       </div>
 
+      <!-- Live Chart.js Row (wired to backend analytics) -->
+      <div class="dashboard-grid" id="live-charts-row" style="margin-top:18px;">
+        <div class="dash-card" style="padding:20px;">
+          <div class="card-head">
+            <div>
+              <h3 class="card-title">Stock by Category</h3>
+              <p class="card-desc">Live from your inventory</p>
+            </div>
+          </div>
+          <div style="position:relative;height:260px;margin-top:8px;">
+            <canvas id="chart-stock-summary" data-testid="chart-stock-summary"></canvas>
+          </div>
+          <div id="chart-stock-empty" style="display:none;text-align:center;padding:30px 0;color:var(--text-muted);font-size:13px;">No products yet. Add your first product to see the chart.</div>
+        </div>
+        <div class="dash-card" style="padding:20px;">
+          <div class="card-head">
+            <div>
+              <h3 class="card-title">Monthly Sales</h3>
+              <p class="card-desc">Units sold per month</p>
+            </div>
+          </div>
+          <div style="position:relative;height:260px;margin-top:8px;">
+            <canvas id="chart-monthly-sales" data-testid="chart-monthly-sales"></canvas>
+          </div>
+          <div id="chart-monthly-empty" style="display:none;text-align:center;padding:30px 0;color:var(--text-muted);font-size:13px;">No sales recorded yet.</div>
+        </div>
+      </div>
+
       <!-- Two Column Grid -->
       <div class="dashboard-grid">
         <!-- Demand Trends Chart -->
@@ -754,6 +782,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
   <script src="api.js"></script>
   <script>
     // Auth guard: if no token, bounce to landing page.
